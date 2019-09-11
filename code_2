@@ -1,0 +1,147 @@
+#include <stdio.h> 
+#include <dos.h> 
+#include <time.h> 
+#include <bios.h> 
+#include <conio.h>
+
+unsigned char DRV0, DRV1, SNS0, SNS1, SNS2;
+int Esc, esc;
+void writeRC( char data )	//Установка состояний двигателя
+{
+   outportb( 0x37A, 0x04 );
+   outportb( 0x378, data );
+   outportb( 0x37A, 0x00 );
+   delay(1);
+   outportb( 0x37A, 0x04 );
+}
+
+void writeRD( char data )	//Выбор степени и направления двигателя; вкл/выкл двигателя
+{
+   outportb( 0x37A, 0x0E );
+   outportb( 0x378, data );
+   outportb( 0x37A, 0x0A );
+   delay(1);
+   outportb( 0x37A, 0x04 );
+}
+
+char readRD()			//Считывание информации с датчиков
+{
+   static char ans=0;
+   outportb( 0x37A, 0x2E );
+   outportb( 0x378, 0xFF );
+   outportb( 0x37A, 0x2F );
+   delay(1);
+   ans = inportb( 0x378 );
+   outportb( 0x37A, 0x04 );
+   return( ans );
+}
+void write(unsigned char DRV0){ 	//Функция движения УРТК
+writeRC(0x11);
+writeRD(0x80);
+writeRD(DRV0); }
+Begining(){			//Функция движения к началу координат
+esc=0;
+while(esc != 27){
+writeRC(0x13);
+SNS0=readRD();
+SNS1=readRD();
+if  (  (((SNS0>>0x01)&1)==0) && (((SNS0>>0x04)&1)==0)		//Проверка достижения концевых датчиков
+&&(((SNS1>>0x01)&1)==0) ) {esc=27;}
+write(0x2A);
+if (kbhit () != 0)
+esc=getch ();
+}
+}
+
+Move(){			//Функция рисования прямоугольника
+esc=0;
+clrscr();
+gotoxy(7, 1); printf("Drawing  rectangle");
+gotoxy(7, 2); printf("Please, wait...");
+gotoxy(7, 3); printf("Exit = Esc");
+while (esc !=27){
+writeRC(0x13);
+SNS0=readRD();
+if(((SNS0>>0x00)&1)==0){esc = 27;}
+write(0x01);
+if (kbhit () != 0)
+esc=getch();
+}
+esc=0;
+while (esc !=27){
+writeRC(0x13);
+SNS0=readRD();
+if(((SNS0>>0x03)&1)==0){esc = 27;}
+write(0x04);
+if (kbhit () != 0)
+esc=getch();
+}
+esc=0;
+while (esc !=27){
+writeRC(0x13);
+SNS0=readRD();
+if(((SNS0>>0x01)&1)==0){esc = 27;}
+write(0x02);
+if (kbhit () != 0)
+esc=getch();
+}
+esc=0;
+while (esc !=27){
+writeRC(0x13);
+SNS0=readRD();
+if(((SNS0>>0x04)&1)==0){esc = 27;}
+write(0x08);
+if (kbhit () != 0)
+esc=getch();
+}
+}
+
+
+Program(){			//Программа реализации задания 
+while(Esc !=27){
+clrscr();
+gotoxy(7, 1); printf("To going to the beginning, press 1");	//Меню 
+gotoxy(7, 2); printf("To going to the center, press 2");
+gotoxy(7, 3); printf("To going to the corner, press 3");
+gotoxy(7, 4); printf("To drawing  rectangle, press 4");
+gotoxy(7, 5); printf("To exit, press Esc");
+switch(getch()){
+case 49: clrscr();
+gotoxy(7, 1); printf("Going to the beginning");
+gotoxy(7, 2); printf("Please, wait...");
+Begining(); break;
+case 50: clrscr();
+gotoxy(7, 1); printf("Going to the center");
+write(0x01);
+delay(14000);
+write(0x00);
+gotoxy(7, 2); printf("Waiting 3 sec...");
+delay(3000);   break;
+case 51: clrscr();
+gotoxy(7, 1); printf("Going to the corner");
+Begining();
+gotoxy(7, 2); printf("Waiting 3 sec...");
+delay(3000);  break;
+case 52: Move();
+case 27: write(0x00); Esc=27; break;
+}
+}
+clrscr();
+gotoxy(7, 2); printf("Program complete, press any key");
+getch();
+}
+void main(){				//Основная программа
+clrscr();
+gotoxy(7, 1); printf("==========MENU===========");	//Начальное меню
+gotoxy(7, 2); printf("To start working, press 1");
+gotoxy(7, 3); printf("To exit, press Esc");
+switch(getch()){
+case 49: Program(); break;
+case 27: write(0x00); Esc=27; break;
+}
+write(0x00);
+clrscr();
+gotoxy(7, 1); printf("Exit. Press any key...");
+getch();
+}
+
